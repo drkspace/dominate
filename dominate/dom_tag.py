@@ -26,6 +26,7 @@ import threading
 from asyncio import get_running_loop
 from uuid import uuid4
 from contextvars import ContextVar
+from typing import TYPE_CHECKING
 
 try:
   # Python 3
@@ -86,23 +87,23 @@ class dom_tag(object):
                      # modified
   is_inline = False
 
+  if not TYPE_CHECKING:
+    def __new__(_cls, *args, **kwargs):
+      '''
+      Check if bare tag is being used a a decorator
+      (called with a single function arg).
+      decorate the function and return
+      '''
+      if len(args) == 1 and isinstance(args[0], Callable) \
+          and not isinstance(args[0], dom_tag) and not kwargs:
+        wrapped = args[0]
 
-  def __new__(_cls, *args, **kwargs):
-    '''
-    Check if bare tag is being used a a decorator
-    (called with a single function arg).
-    decorate the function and return
-    '''
-    if len(args) == 1 and isinstance(args[0], Callable) \
-        and not isinstance(args[0], dom_tag) and not kwargs:
-      wrapped = args[0]
-
-      @wraps(wrapped)
-      def f(*args, **kwargs):
-        with _cls() as _tag:
-          return wrapped(*args, **kwargs) or _tag
-      return f
-    return object.__new__(_cls)
+        @wraps(wrapped)
+        def f(*args, **kwargs):
+          with _cls() as _tag:
+            return wrapped(*args, **kwargs) or _tag
+        return f
+      return object.__new__(_cls)
 
 
   def __init__(self, *args, **kwargs):
